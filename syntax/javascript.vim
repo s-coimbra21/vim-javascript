@@ -27,6 +27,7 @@ syntax case match
 syntax match   jsNoise          /[:,\;]\{1}/
 syntax match   jsNoise          /[\.]\{1}/ skipwhite skipempty nextgroup=jsObjectProp,jsFuncCall,jsPrototype,jsTaggedTemplate
 syntax match   jsObjectProp     contained /\<[a-zA-Z_$][0-9a-zA-Z_$]*\>/
+syntax match   jsIdentifier     /\<[a-zA-Z_$][0-9a-zA-Z_$]*/
 syntax match   jsFuncCall       /\k\+\%(\s*(\)\@=/
 syntax match   jsParensError    /[)}\]]/
 
@@ -85,6 +86,8 @@ syntax region  jsObjectKeyComputed contained matchgroup=jsBrackets start=/\[/ en
 syntax match   jsObjectSeparator   contained /,/
 syntax region  jsObjectValue       contained matchgroup=jsNoise start=/:/ end=/\%(,\|}\)\@=/ contains=@jsExpression extend
 syntax match   jsObjectFuncName    contained /\<[a-zA-Z_$][0-9a-zA-Z_$]*\>[\r\n\t ]*(\@=/ skipwhite skipempty nextgroup=jsFuncArgs
+syntax match   jsFunctionKey       contained /\<[a-zA-Z_$][0-9a-zA-Z_$]*\>\(\s*:\s*(\)\@=/ nextgroup=jsArrowFuncArgs
+syntax match   jsFunctionKey       contained /\<[a-zA-Z_$][0-9a-zA-Z_$]*\>\(\s*:\s*\k\+\s*\%(=>\)\)\@=/ nextgroup=jsArrowFuncArgs
 syntax match   jsFunctionKey       contained /\<[a-zA-Z_$][0-9a-zA-Z_$]*\>\(\s*:\s*function\s*\)\@=/
 syntax match   jsObjectMethodType  contained /\%(get\|set\)\%( \k\+\)\@=/ skipwhite skipempty nextgroup=jsObjectFuncName
 syntax region  jsObjectStringKey   contained start=+"+  skip=+\\\("\|$\)+  end=+"\|$+  contains=jsSpecial,@Spell extend skipwhite skipempty nextgroup=jsFuncArgs,jsObjectValue
@@ -155,9 +158,9 @@ syntax region  jsTryCatchBlock      contained matchgroup=jsTryCatchBraces      s
 syntax region  jsFinallyBlock       contained matchgroup=jsFinallyBraces       start=/{/  end=/}/  contains=@jsAll,jsBlock extend fold
 syntax region  jsSwitchBlock        contained matchgroup=jsSwitchBraces        start=/{/  end=/}/  contains=@jsAll,jsBlock,jsSwitchCase extend fold
 syntax region  jsRepeatBlock        contained matchgroup=jsRepeatBraces        start=/{/  end=/}/  contains=@jsAll,jsBlock extend fold
-syntax region  jsDestructuringBlock contained matchgroup=jsDestructuringBraces start=/{/  end=/}/  contains=jsDestructuringProperty,jsDestructuringAssignment,jsDestructuringNoise,jsDestructuringPropertyComputed,jsSpreadExpression,jsComment extend fold
+syntax region  jsDestructuringBlock contained matchgroup=jsDestructuringBraces start=/{/  end=/}/  contains=jsDestructuringProperty,jsDestructuringAssignment,jsDestructuringNoise,jsDestructuringPropertyComputed,jsSpreadExpression,jsComment,jsIdentifier extend fold
 syntax region  jsDestructuringArray contained matchgroup=jsDestructuringBraces start=/\[/ end=/\]/ contains=jsDestructuringPropertyValue,jsNoise,jsDestructuringProperty,jsSpreadExpression,jsComment extend fold
-syntax region  jsObject             contained matchgroup=jsObjectBraces        start=/{/  end=/}/  contains=jsObjectKey,jsObjectKeyString,jsObjectKeyComputed,jsObjectSeparator,jsObjectFuncName,jsObjectMethodType,jsGenerator,jsComment,jsObjectStringKey,jsSpreadExpression,jsDecorator,jsAsyncKeyword extend fold
+syntax region  jsObject             contained matchgroup=jsObjectBraces        start=/{/  end=/}/  contains=jsObjectKey,jsObjectKeyString,jsObjectKeyComputed,jsObjectSeparator,jsObjectFuncName,jsObjectMethodType,jsGenerator,jsComment,jsObjectStringKey,jsSpreadExpression,jsDecorator,jsAsyncKeyword,jsIdentifier extend fold
 syntax region  jsBlock                        matchgroup=jsBraces              start=/{/  end=/}/  contains=@jsAll,jsSpreadExpression extend fold
 syntax region  jsModuleGroup        contained matchgroup=jsModuleBraces        start=/{/ end=/}/   contains=jsModuleKeyword,jsModuleComma,jsModuleAs,jsComment,jsFlowTypeKeyword skipwhite skipempty nextgroup=jsFrom fold
 syntax region  jsSpreadExpression   contained matchgroup=jsSpreadOperator      start=/\.\.\./ end=/[,}\]]\@=/ contains=@jsExpression
@@ -183,10 +186,11 @@ exe 'syntax match jsArrowFunction /_\s*\(=>\)\@=/    skipwhite skipempty nextgro
 
 " Classes
 syntax keyword jsClassKeyword           contained class
-syntax keyword jsExtendsKeyword         contained extends skipwhite skipempty nextgroup=@jsExpression
+syntax keyword jsExtendsKeyword         contained extends skipwhite skipempty nextgroup=jsClassName
 syntax match   jsClassNoise             contained /\./
 syntax match   jsClassMethodType        contained /\%(get\|set\|static\)\%( \k\+\)\@=/ skipwhite skipempty nextgroup=jsAsyncKeyword,jsFuncName,jsClassProperty
-syntax region  jsClassDefinition                  start=/\<class\>/ end=/\(\<extends\>\s\+\)\@<!{\@=/ contains=jsClassKeyword,jsExtendsKeyword,jsClassNoise,@jsExpression,jsFlowClassGroup skipwhite skipempty nextgroup=jsCommentClass,jsClassBlock,jsFlowClassGroup
+syntax region  jsClassDefinition                  start=/\<class\>/ end=/\(\<extends\>\s\+\)\@<!{\@=/ contains=jsClassName,jsClassKeyword,jsExtendsKeyword,jsClassNoise,@jsExpression,jsFlowClassGroup skipwhite skipempty nextgroup=jsCommentClass,jsClassBlock,jsFlowClassGroup
+syntax match   jsClassName              contained /\<[a-zA-Z_$][0-9a-zA-Z_$]*/
 syntax match   jsClassProperty          contained /\<[0-9a-zA-Z_$]*\>\(\s*[=:]\)\@=/ skipwhite skipempty nextgroup=jsClassValue,jsFlowClassDef
 syntax region  jsClassValue             contained start=/=/ end=/\%(;\|}\|\n\)\@=/ contains=@jsExpression
 syntax region  jsClassPropertyComputed  contained matchgroup=jsBrackets start=/\[/ end=/]/ contains=@jsExpression skipwhite skipempty nextgroup=jsFuncArgs,jsClassValue extend
@@ -237,7 +241,7 @@ if exists("javascript_plugin_flow")
   runtime extras/flow.vim
 endif
 
-syntax cluster jsExpression  contains=jsBracket,jsParen,jsObject,jsTernaryIf,jsTaggedTemplate,jsTemplateString,jsString,jsRegexpString,jsNumber,jsFloat,jsOperator,jsBooleanTrue,jsBooleanFalse,jsNull,jsFunction,jsArrowFunction,jsGlobalObjects,jsExceptions,jsFutureKeys,jsDomErrNo,jsDomNodeConsts,jsHtmlEvents,jsFuncCall,jsUndefined,jsNan,jsPrototype,jsBuiltins,jsNoise,jsClassDefinition,jsArrowFunction,jsArrowFuncArgs,jsParensError,jsComment,jsArguments,jsThis,jsSuper,jsDo,jsForAwait,jsAsyncKeyword,jsStatement
+syntax cluster jsExpression  contains=jsBracket,jsParen,jsObject,jsTernaryIf,jsTaggedTemplate,jsTemplateString,jsString,jsRegexpString,jsNumber,jsFloat,jsOperator,jsBooleanTrue,jsBooleanFalse,jsNull,jsFunction,jsArrowFunction,jsGlobalObjects,jsExceptions,jsFutureKeys,jsDomErrNo,jsDomNodeConsts,jsHtmlEvents,jsFuncCall,jsUndefined,jsNan,jsPrototype,jsBuiltins,jsNoise,jsClassDefinition,jsArrowFunction,jsArrowFuncArgs,jsParensError,jsComment,jsArguments,jsThis,jsSuper,jsDo,jsForAwait,jsAsyncKeyword,jsStatement,jsIdentifier
 syntax cluster jsAll         contains=@jsExpression,jsStorageClass,jsConditional,jsRepeat,jsReturn,jsException,jsTry,jsNoise,jsBlockLabel
 
 " Define the default highlighting.
@@ -250,6 +254,8 @@ if version >= 508 || !exists("did_javascript_syn_inits")
   else
     command -nargs=+ HiLink hi def link <args>
   endif
+  HiLink jsIdentifier           Identifier
+  HiLink jsClassName            Identifier
   HiLink jsComment              Comment
   HiLink jsEnvComment           PreProc
   HiLink jsParensIfElse         jsParens
@@ -338,6 +344,7 @@ if version >= 508 || !exists("did_javascript_syn_inits")
   HiLink jsExport               Include
   HiLink jsExportDefault        StorageClass
   HiLink jsExportDefaultGroup   jsExportDefault
+  HiLink jsModuleKeyword        Identifier
   HiLink jsModuleAs             Include
   HiLink jsModuleComma          jsNoise
   HiLink jsModuleAsterisk       Noise
@@ -346,7 +353,7 @@ if version >= 508 || !exists("did_javascript_syn_inits")
   HiLink jsDecoratorFunction    Function
   HiLink jsParensDecorator      jsParens
   HiLink jsFuncArgOperator      jsFuncArgs
-  HiLink jsClassProperty        jsObjectKey
+  HiLink jsClassProperty        jsIdentifier
   HiLink jsSpreadOperator       Operator
   HiLink jsRestOperator         Operator
   HiLink jsRestExpression       jsFuncArgs
@@ -357,10 +364,11 @@ if version >= 508 || !exists("did_javascript_syn_inits")
   HiLink jsBlockLabel           Identifier
   HiLink jsBlockLabelKey        jsBlockLabel
 
-  HiLink jsDestructuringBraces     Noise
-  HiLink jsDestructuringProperty   jsFuncArgs
-  HiLink jsDestructuringAssignment jsObjectKey
-  HiLink jsDestructuringNoise      Noise
+  HiLink jsDestructuringBraces        Noise
+  HiLink jsDestructuringProperty      jsFuncArgs
+  HiLink jsDestructuringAssignment    jsObjectKey
+  HiLink jsDestructuringNoise         Noise
+  HiLink jsDestructuringPropertyValue Identifier
 
   HiLink jsCommentFunction      jsComment
   HiLink jsCommentClass         jsComment
